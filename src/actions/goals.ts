@@ -7,10 +7,8 @@ import { entries, goals } from "@/db/schema";
 import { isISODate } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
 import {
-  CATEGORIES,
   type Category,
   type GoalType,
-  isCategory,
   isGoalType,
   nextMonthPeriod,
   periodForType,
@@ -206,5 +204,3 @@ export async function carryDailyGoals(formData: FormData) {
   }
   refresh();
 }
-
-export { CATEGORIES, isCategory };
