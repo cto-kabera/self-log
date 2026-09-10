@@ -68,13 +68,14 @@ export function NewGoalForm({
       </div>
       {financial ? (
         <div className="grid gap-3 sm:grid-cols-2">
+          <input type="hidden" name="periodStartFallback" value={period.start} />
+          <input type="hidden" name="periodEndFallback" value={period.end} />
           <div className="grid gap-2">
             <Label htmlFor="period-start">Period start</Label>
             <Input
               id="period-start"
               name="periodStart"
               type="date"
-              required
               defaultValue={period.start}
             />
           </div>
@@ -84,7 +85,6 @@ export function NewGoalForm({
               id="period-end"
               name="periodEnd"
               type="date"
-              required
               defaultValue={period.end}
             />
           </div>

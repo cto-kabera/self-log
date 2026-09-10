@@ -25,6 +25,14 @@ function numberFrom(formData: FormData, key: string) {
   return Number.isFinite(value) ? value : null;
 }
 
+function firstISODate(formData: FormData, ...keys: string[]) {
+  for (const key of keys) {
+    const value = String(formData.get(key) ?? "");
+    if (isISODate(value)) return value;
+  }
+  return null;
+}
+
 export async function createGoal(formData: FormData) {
   const user = await requireUser();
   const title = String(formData.get("title") ?? "").trim();
@@ -35,10 +43,10 @@ export async function createGoal(formData: FormData) {
     return;
   }
   const type: GoalType = typeRaw;
-  const customStart = String(formData.get("periodStart") ?? "");
-  const customEnd = String(formData.get("periodEnd") ?? "");
+  const customStart = firstISODate(formData, "periodStart", "periodStartFallback");
+  const customEnd = firstISODate(formData, "periodEnd", "periodEndFallback");
   const period =
-    type === "financial" && isISODate(customStart) && isISODate(customEnd)
+    type === "financial" && customStart && customEnd
       ? { start: customStart, end: customEnd }
       : periodForType(type, today);
 
