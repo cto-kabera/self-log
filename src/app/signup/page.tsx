@@ -19,7 +19,8 @@ export default async function SignupPage() {
         <CardHeader>
           <CardTitle>Create your account</CardTitle>
           <CardDescription>
-            Email and password only. No social logins in this version.
+            Email and password. Google sign-in is documented for a later
+            Supabase project; it is not wired in this local preview.
           </CardDescription>
         </CardHeader>
         <CardContent>

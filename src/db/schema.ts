@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -57,54 +57,32 @@ export const verification = sqliteTable("verification", {
   updatedAt: integer("updated_at", { mode: "timestamp" }),
 });
 
-export const habit = sqliteTable("habit", {
+export const goals = sqliteTable("goals", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  archivedAt: integer("archived_at", { mode: "timestamp" }),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  periodStart: text("period_start").notNull(),
+  periodEnd: text("period_end").notNull(),
+  targetValue: real("target_value").notNull(),
+  status: text("status").notNull().default("active"),
+  parentGoalId: text("parent_goal_id"),
+  category: text("category"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
-export const habitCompletion = sqliteTable(
-  "habit_completion",
-  {
-    id: text("id").primaryKey(),
-    habitId: text("habit_id")
-      .notNull()
-      .references(() => habit.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    completedOn: text("completed_on").notNull(),
-  },
-  (table) => [
-    uniqueIndex("habit_completion_habit_day").on(table.habitId, table.completedOn),
-  ],
-);
-
-export const goal = sqliteTable("goal", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  target: integer("target").notNull(),
-  unit: text("unit"),
-  archivedAt: integer("archived_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
-
-export const goalEntry = sqliteTable("goal_entry", {
+export const entries = sqliteTable("entries", {
   id: text("id").primaryKey(),
   goalId: text("goal_id")
     .notNull()
-    .references(() => goal.id, { onDelete: "cascade" }),
+    .references(() => goals.id, { onDelete: "cascade" }),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  amount: integer("amount").notNull(),
-  note: text("note"),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  label: text("label").notNull(),
+  plannedAmount: real("planned_amount").notNull(),
+  actualAmount: real("actual_amount").notNull(),
+  loggedAt: integer("logged_at", { mode: "timestamp" }).notNull(),
 });

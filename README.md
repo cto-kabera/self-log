@@ -1,48 +1,39 @@
-# Steady
+# Self-help tracking tool (Steady)
 
-A self-help tracker for daily habits and numbered goals. Create an account, check off routines, keep streaks, and log progress toward a target. Data is stored on the server, so the same login works on another device.
+Personal goal tracker that follows the [Self-Help Tracking Tool SRS](https://davidkabera.github.io/life-tracker/): one polymorphic Goal entity for daily, weekly, monthly, quarterly, and financial targets, with financial sub-goals and planned vs actual entries.
+
+This cloud preview keeps the Steady sage theme. Auth is email/password on this server (SQLite). The SRS calls for a dedicated Supabase project and Google OAuth; those are not required to run locally. Roll-up of `actual_value` is computed in application code, not in SQL.
 
 ## Run locally
 
-You need Node.js 20+.
+Node.js 20+.
 
 ```bash
 npm install
 cp .env.example .env.local
 ```
 
-Set `BETTER_AUTH_SECRET` to a long random string (`openssl rand -base64 32` works). Keep `BETTER_AUTH_URL` pointed at the URL you will open in the browser.
-
-Create the SQLite tables:
+Set `BETTER_AUTH_SECRET` (`openssl rand -base64 32`). Then:
 
 ```bash
 npm run db:push
-```
-
-Start the app:
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:43123](http://localhost:43123), create an account, add a habit, and set a goal.
+Open [http://localhost:43123](http://localhost:43123).
 
-SQLite lives at `data/tracker.db` by default. Change `DATABASE_PATH` if you want a different file. For a hosted database later, keep the same schema and point that path (or swap the Drizzle driver) at your server.
+SQLite path defaults to `data/tracker.db`.
 
-## What it does
+## What you can do now
 
-- **Habits** — daily check-offs, a seven-day grid, current streak, archive
-- **Goals** — numeric target, optional unit, progress logs, percent complete
-- **Accounts** — email and password only (no Google/GitHub in this version)
+- Create cadence goals (daily / weekly / monthly / quarterly)
+- Create a financial goal for a period with bills, emergency fund, investment & saving, and income sub-goals
+- Log planned and actual amounts; the parent total is summed in the backend layer
+- Copy a financial plan to the next month
+- Carry daily goal titles into today
 
-There is no email verification. Treat this as a personal tool: anyone who can reach the server can sign up.
+Google OAuth is listed in the SRS (ASR-F08) and stays off until a Supabase project is connected.
 
-## Scripts
+## Docs
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Development server on port 43123 |
-| `npm run build` | Production build |
-| `npm start` | Production server on port 43123 |
-| `npm run db:push` | Apply the Drizzle schema to SQLite |
-| `npm run lint` | ESLint |
+SRS: [https://davidkabera.github.io/life-tracker/](https://davidkabera.github.io/life-tracker/)

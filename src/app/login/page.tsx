@@ -19,7 +19,8 @@ export default async function LoginPage() {
         <CardHeader>
           <CardTitle>Log in</CardTitle>
           <CardDescription>
-            Pick up today’s habits and goals on this device.
+            Email and password. Google OAuth is specified in the SRS and will
+            land once a dedicated Supabase project is connected.
           </CardDescription>
         </CardHeader>
         <CardContent>

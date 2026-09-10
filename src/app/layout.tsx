@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Steady — habit and goal tracker",
+  title: "Steady — self-help tracking tool",
   description:
-    "Check off daily habits, keep streaks, and log progress toward numbered goals.",
+    "Track daily through quarterly goals and roll financial categories into one period target.",
 };
 
 export default async function RootLayout({

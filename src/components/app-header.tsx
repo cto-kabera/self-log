@@ -27,16 +27,16 @@ export function AppHeader({
               Today
             </Link>
             <Link
-              href="/habits"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-            >
-              Habits
-            </Link>
-            <Link
               href="/goals"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
             >
               Goals
+            </Link>
+            <Link
+              href="/finance"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+            >
+              Finance
             </Link>
             <form action={signOutAction}>
               <Button variant="outline" size="sm" type="submit">
