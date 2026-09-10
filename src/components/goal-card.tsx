@@ -5,7 +5,7 @@ import {
   updateSubGoalTarget,
 } from "@/actions/goals";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { FormSubmit } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -111,9 +111,9 @@ export function GoalCard({
                           className="w-32"
                         />
                       </div>
-                      <Button type="submit" variant="outline" size="sm">
+                      <FormSubmit variant="outline" size="sm">
                         Save target
-                      </Button>
+                      </FormSubmit>
                     </form>
                     <LogForm goalId={child.id} />
                     {child.logs.length > 0 ? (
@@ -144,16 +144,16 @@ export function GoalCard({
             {isFinancial ? (
               <form action={cloneFinancialToNextPeriod}>
                 <input type="hidden" name="id" value={goal.id} />
-                <Button type="submit" variant="outline" size="sm">
+                <FormSubmit variant="outline" size="sm">
                   Copy to next month
-                </Button>
+                </FormSubmit>
               </form>
             ) : null}
             <form action={archiveGoal}>
               <input type="hidden" name="id" value={goal.id} />
-              <Button type="submit" variant="ghost" size="sm">
+              <FormSubmit variant="ghost" size="sm">
                 Archive
-              </Button>
+              </FormSubmit>
             </form>
           </div>
         )}
@@ -172,7 +172,7 @@ function LogForm({
   defaultLabel?: string;
 }) {
   return (
-    <form action={logEntry} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+    <form action={logEntry} noValidate className="flex flex-col gap-2 sm:flex-row sm:items-end">
       <input type="hidden" name="goalId" value={goalId} />
       <div className="grid flex-1 gap-1">
         <Label htmlFor={`label-${goalId}`}>Entry</Label>
@@ -204,7 +204,7 @@ function LogForm({
           defaultValue={defaultActual}
         />
       </div>
-      <Button type="submit">Log</Button>
+      <FormSubmit>Log</FormSubmit>
     </form>
   );
 }

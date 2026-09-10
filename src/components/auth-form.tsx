@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { type AuthState, signInAction, signUpAction } from "@/actions/auth";
-import { Button } from "@/components/ui/button";
+import { FormSubmit } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -56,13 +56,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending}>
+      <FormSubmit disabled={pending}>
         {pending
           ? "Working…"
           : mode === "signup"
             ? "Create account"
             : "Log in"}
-      </Button>
+      </FormSubmit>
       <p className="text-center text-sm text-muted-foreground">
         {mode === "signup" ? (
           <>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { carryDailyGoals } from "@/actions/goals";
 import { GoalList } from "@/components/goal-card";
 import { NewGoalForm } from "@/components/goal-form";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { FormSubmit, buttonVariants } from "@/components/ui/button";
 import { prettyDate } from "@/lib/dates";
 import { getSession, getToday } from "@/lib/session";
 import { overlapsToday } from "@/server/domain";
@@ -43,9 +43,9 @@ export default async function HomePage() {
             <h2 className="text-lg font-medium">Today</h2>
             <form action={carryDailyGoals}>
               <input type="hidden" name="today" value={today} />
-              <Button type="submit" variant="outline" size="sm">
+              <FormSubmit variant="outline" size="sm">
                 Carry dailies to today
-              </Button>
+              </FormSubmit>
             </form>
           </div>
           <NewGoalForm today={today} defaultType="daily" />

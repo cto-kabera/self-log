@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { signOutAction } from "@/actions/auth";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { FormSubmit, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function AppHeader({
@@ -39,9 +39,9 @@ export function AppHeader({
               Finance
             </Link>
             <form action={signOutAction}>
-              <Button variant="outline" size="sm" type="submit">
+              <FormSubmit variant="outline" size="sm">
                 Log out
-              </Button>
+              </FormSubmit>
             </form>
           </nav>
         ) : (

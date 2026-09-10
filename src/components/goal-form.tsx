@@ -1,7 +1,8 @@
 import { createGoal } from "@/actions/goals";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { GOAL_TYPES, periodForType, typeLabel } from "@/server/domain";
 
 const selectClass =
@@ -18,7 +19,7 @@ export function NewGoalForm({
 }) {
   const period = periodForType("financial", today);
   return (
-    <form action={createGoal} className="grid gap-3">
+    <form action={createGoal} noValidate className="grid gap-3">
       <input type="hidden" name="today" value={today} />
       {financial ? <input type="hidden" name="type" value="financial" /> : null}
       <div className="grid gap-3 sm:grid-cols-[1fr_10rem_8rem] sm:items-end">
@@ -71,21 +72,21 @@ export function NewGoalForm({
           <input type="hidden" name="periodStartFallback" value={period.start} />
           <input type="hidden" name="periodEndFallback" value={period.end} />
           <div className="grid gap-2">
-            <Label htmlFor="period-start">Period start</Label>
+            <Label htmlFor="period-start">Period start (YYYY-MM-DD)</Label>
             <Input
               id="period-start"
               name="periodStart"
-              type="date"
               defaultValue={period.start}
+              placeholder={period.start}
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="period-end">Period end</Label>
+            <Label htmlFor="period-end">Period end (YYYY-MM-DD)</Label>
             <Input
               id="period-end"
               name="periodEnd"
-              type="date"
               defaultValue={period.end}
+              placeholder={period.end}
             />
           </div>
           <div className="grid gap-2">
@@ -120,9 +121,9 @@ export function NewGoalForm({
           </div>
         </div>
       ) : null}
-      <Button type="submit" className="w-fit">
+      <button type="submit" className={cn(buttonVariants(), "w-fit")}>
         {financial ? "Create financial goal" : "Add goal"}
-      </Button>
+      </button>
     </form>
   );
 }
