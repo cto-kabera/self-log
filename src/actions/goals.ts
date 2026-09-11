@@ -39,7 +39,10 @@ export async function createGoal(formData: FormData) {
   const typeRaw = String(formData.get("type") ?? "");
   const target = numberFrom(formData, "target");
   const today = String(formData.get("today") ?? "");
-  if (!title || !isGoalType(typeRaw) || target === null || target < 0 || !isISODate(today)) {
+  if (!title || !isGoalType(typeRaw) || !isISODate(today)) {
+    return;
+  }
+  if (typeRaw !== "financial" && (target === null || target < 0)) {
     return;
   }
   const type: GoalType = typeRaw;
@@ -50,6 +53,13 @@ export async function createGoal(formData: FormData) {
       ? { start: customStart, end: customEnd }
       : periodForType(type, today);
 
+  const income = numberFrom(formData, "sub_source") ?? 0;
+  let resolvedTarget = target ?? 0;
+  if (type === "financial" && income > 0) {
+    resolvedTarget = income;
+  }
+  if (resolvedTarget < 0) return;
+
   const id = crypto.randomUUID();
   await db.insert(goals).values({
     id,
@@ -58,22 +68,40 @@ export async function createGoal(formData: FormData) {
     title,
     periodStart: period.start,
     periodEnd: period.end,
-    targetValue: target,
+    targetValue: resolvedTarget,
     status: "active",
     parentGoalId: null,
     category: null,
+    allocationPercent: null,
     createdAt: new Date(),
   });
 
   if (type === "financial") {
-    const defaults: { category: Category; title: string }[] = [
-      { category: "bills", title: "Bills" },
-      { category: "emergency_fund", title: "Emergency fund" },
-      { category: "investment_saving", title: "Investment & saving" },
-      { category: "source", title: "Income sources" },
-    ];
+    const defaults: { category: Category; title: string; percentKey: string; amountKey: string }[] =
+      [
+        { category: "bills", title: "Bills", percentKey: "pct_bills", amountKey: "sub_bills" },
+        {
+          category: "emergency_fund",
+          title: "Emergency fund",
+          percentKey: "pct_emergency_fund",
+          amountKey: "sub_emergency_fund",
+        },
+        {
+          category: "investment_saving",
+          title: "Investment & saving",
+          percentKey: "pct_investment_saving",
+          amountKey: "sub_investment_saving",
+        },
+        { category: "source", title: "Income sources", percentKey: "", amountKey: "sub_source" },
+      ];
     for (const item of defaults) {
-      const subTarget = numberFrom(formData, `sub_${item.category}`) ?? 0;
+      const percent =
+        item.category === "source" ? null : numberFrom(formData, item.percentKey);
+      const fallbackAmount = numberFrom(formData, item.amountKey) ?? 0;
+      const allocated =
+        item.category !== "source" && percent != null && percent > 0 && income > 0
+          ? Math.round(income * percent) / 100
+          : fallbackAmount;
       await db.insert(goals).values({
         id: crypto.randomUUID(),
         userId: user.id,
@@ -81,10 +109,11 @@ export async function createGoal(formData: FormData) {
         title: item.title,
         periodStart: period.start,
         periodEnd: period.end,
-        targetValue: subTarget,
+        targetValue: allocated,
         status: "active",
         parentGoalId: id,
         category: item.category,
+        allocationPercent: item.category === "source" ? null : percent,
         createdAt: new Date(),
       });
     }
@@ -97,6 +126,7 @@ export async function logEntry(formData: FormData) {
   const user = await requireUser();
   const goalId = String(formData.get("goalId") ?? "");
   const label = String(formData.get("label") ?? "").trim() || "Log";
+  const comment = String(formData.get("comment") ?? "").trim() || null;
   const planned = numberFrom(formData, "planned") ?? 0;
   const actual = numberFrom(formData, "actual");
   if (!goalId || actual === null) return;
@@ -113,6 +143,7 @@ export async function logEntry(formData: FormData) {
     label,
     plannedAmount: planned,
     actualAmount: actual,
+    comment,
     loggedAt: new Date(),
   });
   refresh();
@@ -129,15 +160,41 @@ export async function archiveGoal(formData: FormData) {
   refresh();
 }
 
-export async function updateSubGoalTarget(formData: FormData) {
+export async function saveFinancialBudget(formData: FormData) {
   const user = await requireUser();
-  const id = String(formData.get("id") ?? "");
-  const target = numberFrom(formData, "target");
-  if (!id || target === null || target < 0) return;
+  const parentId = String(formData.get("parentId") ?? "");
+  const income = numberFrom(formData, "income");
+  if (!parentId || income === null || income < 0) return;
+
+  const parent = await db.query.goals.findFirst({
+    where: and(eq(goals.id, parentId), eq(goals.userId, user.id)),
+  });
+  if (!parent || parent.type !== "financial" || parent.parentGoalId) return;
+
+  const children = await db.query.goals.findMany({
+    where: and(eq(goals.parentGoalId, parentId), eq(goals.userId, user.id)),
+  });
+
   await db
     .update(goals)
-    .set({ targetValue: target })
-    .where(and(eq(goals.id, id), eq(goals.userId, user.id)));
+    .set({ targetValue: income })
+    .where(and(eq(goals.id, parentId), eq(goals.userId, user.id)));
+
+  for (const child of children) {
+    if (child.category === "source") {
+      await db
+        .update(goals)
+        .set({ targetValue: income, allocationPercent: null })
+        .where(eq(goals.id, child.id));
+      continue;
+    }
+    const percent = numberFrom(formData, `pct_${child.category}`) ?? child.allocationPercent ?? 0;
+    const allocated = Math.round(income * percent) / 100;
+    await db
+      .update(goals)
+      .set({ allocationPercent: percent, targetValue: allocated })
+      .where(eq(goals.id, child.id));
+  }
   refresh();
 }
 
@@ -207,6 +264,7 @@ export async function carryDailyGoals(formData: FormData) {
       status: "active",
       parentGoalId: null,
       category: null,
+      allocationPercent: null,
       createdAt: new Date(),
     });
   }

@@ -70,6 +70,7 @@ export const goals = sqliteTable("goals", {
   status: text("status").notNull().default("active"),
   parentGoalId: text("parent_goal_id"),
   category: text("category"),
+  allocationPercent: real("allocation_percent"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
@@ -84,5 +85,6 @@ export const entries = sqliteTable("entries", {
   label: text("label").notNull(),
   plannedAmount: real("planned_amount").notNull(),
   actualAmount: real("actual_amount").notNull(),
+  comment: text("comment"),
   loggedAt: integer("logged_at", { mode: "timestamp" }).notNull(),
 });

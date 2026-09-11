@@ -55,15 +55,15 @@ export function NewGoalForm({
           </div>
         )}
         <div className="grid gap-2">
-          <Label htmlFor="goal-target">Target</Label>
+          <Label htmlFor="goal-target">{financial ? "Headline target (optional)" : "Target"}</Label>
           <Input
             id="goal-target"
             name="target"
             type="number"
             min={0}
             step="any"
-            required
-            placeholder={financial ? "550000" : "1"}
+            required={!financial}
+            placeholder={financial ? "Defaults to income" : "1"}
           />
         </div>
       </div>
@@ -89,35 +89,49 @@ export function NewGoalForm({
               placeholder={period.end}
             />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="sub-bills">Bills target</Label>
-            <Input id="sub-bills" name="sub_bills" type="number" min={0} step="any" defaultValue={0} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="sub-emergency">Emergency fund</Label>
+          <div className="grid gap-2 sm:col-span-2">
+            <Label htmlFor="sub-source">Monthly income</Label>
             <Input
-              id="sub-emergency"
-              name="sub_emergency_fund"
+              id="sub-source"
+              name="sub_source"
               type="number"
               min={0}
+              step="any"
+              defaultValue={0}
+              placeholder="550000"
+            />
+            <p className="text-xs text-muted-foreground">
+              Allocations below are percentages of this income. They should add up to
+              100% if you want the full month assigned.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="pct-bills">Bills % of income</Label>
+            <Input id="pct-bills" name="pct_bills" type="number" min={0} max={100} step="any" defaultValue={0} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="pct-emergency">Emergency fund %</Label>
+            <Input
+              id="pct-emergency"
+              name="pct_emergency_fund"
+              type="number"
+              min={0}
+              max={100}
               step="any"
               defaultValue={0}
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="sub-invest">Investment & saving</Label>
+            <Label htmlFor="pct-invest">Investment & saving %</Label>
             <Input
-              id="sub-invest"
-              name="sub_investment_saving"
+              id="pct-invest"
+              name="pct_investment_saving"
               type="number"
               min={0}
+              max={100}
               step="any"
               defaultValue={0}
             />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="sub-source">Income sources</Label>
-            <Input id="sub-source" name="sub_source" type="number" min={0} step="any" defaultValue={0} />
           </div>
         </div>
       ) : null}

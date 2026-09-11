@@ -14,9 +14,10 @@ export default async function FinancePage() {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       <h1 className="text-3xl font-semibold tracking-tight">Finance</h1>
       <p className="mt-2 text-muted-foreground">
-        A financial goal is still a goal. Sub-goals hold bills, emergency fund,
-        investment & saving, and income. Actuals are summed in the app, not in
-        the database.
+        A financial goal is still a goal. Set monthly income, then allocate
+        bills, emergency fund, and saving as percentages of that income. Log
+        each expenditure with a short comment so you can see what the money was
+        for.
       </p>
       <div className="mt-6">
         <NewGoalForm today={today} financial />

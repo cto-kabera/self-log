@@ -137,6 +137,7 @@ export type GoalRecord = {
   status: string;
   parentGoalId: string | null;
   category: string | null;
+  allocationPercent: number | null;
 };
 
 export type EntryRecord = {
@@ -145,8 +146,14 @@ export type EntryRecord = {
   label: string;
   plannedAmount: number;
   actualAmount: number;
+  comment: string | null;
   loggedAt: Date;
 };
+
+export function allocatedFromIncome(income: number, percent: number | null) {
+  if (percent == null || percent < 0) return null;
+  return Math.round(income * percent) / 100;
+}
 
 export function actualValue(
   goal: GoalRecord,
