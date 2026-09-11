@@ -79,8 +79,20 @@ export function presentGoal(
   allEntries: EntryRecord[],
   today: string,
 ): PresentedGoal {
+  const categoryOrder: Record<string, number> = {
+    bills: 0,
+    emergency_fund: 1,
+    investment_saving: 2,
+    source: 3,
+  };
   const children = allGoals
     .filter((item) => item.parentGoalId === goal.id && item.status !== "archived")
+    .sort((a, b) => {
+      const byCategory =
+        (categoryOrder[a.category ?? ""] ?? 9) - (categoryOrder[b.category ?? ""] ?? 9);
+      if (byCategory !== 0) return byCategory;
+      return a.title.localeCompare(b.title);
+    })
     .map((child) => presentGoal(child, allGoals, allEntries, today));
   const logs = allEntries
     .filter((entry) => entry.goalId === goal.id)

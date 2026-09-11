@@ -107,7 +107,7 @@ export function GoalCard({
               <CategorySection
                 key={child.id}
                 child={child}
-                compact={compact}
+                compact={compact && child.category !== "bills"}
                 today={today}
               />
             ))}

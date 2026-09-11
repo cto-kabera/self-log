@@ -20,9 +20,8 @@ export default async function HomePage() {
   );
   const daily = current.filter((goal) => goal.type === "daily");
   const weekly = current.filter((goal) => goal.type === "weekly");
-  const monthly = current.filter(
-    (goal) => goal.type === "monthly" || goal.type === "financial",
-  );
+  const monthly = current.filter((goal) => goal.type === "monthly");
+  const financial = current.filter((goal) => goal.type === "financial");
   const quarterly = current.filter((goal) => goal.type === "quarterly");
 
   return (
@@ -68,23 +67,37 @@ export default async function HomePage() {
             />
           </div>
           <div className="grid gap-4">
-            <div className="flex items-end justify-between gap-3">
-              <h2 className="text-lg font-medium">This month</h2>
-              <Link
-                href="/finance"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-              >
-                Finance
-              </Link>
-            </div>
+            <h2 className="text-lg font-medium">This month</h2>
             <GoalList
               goals={monthly}
               compact
               today={today}
-              emptyTitle="No monthly or financial goals"
-              emptyBody="Open Finance to create a period target with categories."
+              emptyTitle="No monthly goals"
+              emptyBody="Set a monthly target from the Goals page."
             />
           </div>
+        </section>
+        <section className="grid gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-medium">Bills this cycle</h2>
+              <p className="text-sm text-muted-foreground">
+                Month target, then vote head and amount for each bill.
+              </p>
+            </div>
+            <Link
+              href="/finance"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+            >
+              Full finance plan
+            </Link>
+          </div>
+          <GoalList
+            goals={financial}
+            today={today}
+            emptyTitle="No financial plan this cycle"
+            emptyBody="Open Finance to set a bills month target and vote heads."
+          />
         </section>
         {quarterly.length > 0 ? (
           <section className="grid gap-4">
@@ -110,9 +123,9 @@ function Landing() {
         One goal domain. Cadence plus a financial plan.
       </h1>
       <p className="mt-4 max-w-xl text-lg text-muted-foreground">
-        Track daily through quarterly targets, then roll bills, reserves, and
-        income into a period financial goal — planned vs actual, without a
-        separate money domain.
+        Track daily through quarterly targets, then run a financial plan with a
+        bills month target and vote heads (name plus amount) so spend is
+        measured against the plan.
       </p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <Link href="/signup" className={cn(buttonVariants({ size: "lg" }))}>
