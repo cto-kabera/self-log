@@ -102,8 +102,9 @@ export async function createGoal(formData: FormData) {
         item.category !== "source" && percent != null && percent > 0 && income > 0
           ? Math.round(income * percent) / 100
           : fallbackAmount;
+      const categoryId = crypto.randomUUID();
       await db.insert(goals).values({
-        id: crypto.randomUUID(),
+        id: categoryId,
         userId: user.id,
         type: "financial",
         title: item.title,
@@ -116,6 +117,29 @@ export async function createGoal(formData: FormData) {
         allocationPercent: item.category === "source" ? null : percent,
         createdAt: new Date(),
       });
+
+      const lineTitles =
+        item.category === "bills"
+          ? ["Rent", "Food", "Emergency"]
+          : item.category === "investment_saving"
+            ? ["Short-term", "Long-term"]
+            : [];
+      for (const lineTitle of lineTitles) {
+        await db.insert(goals).values({
+          id: crypto.randomUUID(),
+          userId: user.id,
+          type: "financial",
+          title: lineTitle,
+          periodStart: period.start,
+          periodEnd: period.end,
+          targetValue: 0,
+          status: "active",
+          parentGoalId: categoryId,
+          category: item.category,
+          allocationPercent: null,
+          createdAt: new Date(),
+        });
+      }
     }
   }
 
@@ -129,6 +153,8 @@ export async function logEntry(formData: FormData) {
   const comment = String(formData.get("comment") ?? "").trim() || null;
   const planned = numberFrom(formData, "planned") ?? 0;
   const actual = numberFrom(formData, "actual");
+  const occurredOnRaw = String(formData.get("occurredOn") ?? "");
+  const occurredOn = isISODate(occurredOnRaw) ? occurredOnRaw : null;
   if (!goalId || actual === null) return;
 
   const owned = await db.query.goals.findFirst({
@@ -144,6 +170,7 @@ export async function logEntry(formData: FormData) {
     plannedAmount: planned,
     actualAmount: actual,
     comment,
+    occurredOn,
     loggedAt: new Date(),
   });
   refresh();
@@ -175,11 +202,7 @@ export async function saveFinancialBudget(formData: FormData) {
     where: and(eq(goals.parentGoalId, parentId), eq(goals.userId, user.id)),
   });
 
-  await db
-    .update(goals)
-    .set({ targetValue: income })
-    .where(and(eq(goals.id, parentId), eq(goals.userId, user.id)));
-
+  let spendTotal = 0;
   for (const child of children) {
     if (child.category === "source") {
       await db
@@ -188,14 +211,98 @@ export async function saveFinancialBudget(formData: FormData) {
         .where(eq(goals.id, child.id));
       continue;
     }
-    const percent = numberFrom(formData, `pct_${child.category}`) ?? child.allocationPercent ?? 0;
-    const allocated = Math.round(income * percent) / 100;
+    const percent = numberFrom(formData, `pct_${child.category}`);
+    const amount = numberFrom(formData, `amt_${child.category}`);
+    let allocated = child.targetValue;
+    if (percent != null && percent > 0) {
+      allocated = Math.round(income * percent) / 100;
+    } else if (amount != null && amount >= 0) {
+      allocated = amount;
+    }
+    spendTotal += allocated;
     await db
       .update(goals)
-      .set({ allocationPercent: percent, targetValue: allocated })
+      .set({
+        allocationPercent: percent != null && percent > 0 ? percent : child.allocationPercent,
+        targetValue: allocated,
+      })
       .where(eq(goals.id, child.id));
   }
+
+  await db
+    .update(goals)
+    .set({ targetValue: spendTotal > 0 ? spendTotal : income })
+    .where(and(eq(goals.id, parentId), eq(goals.userId, user.id)));
   refresh();
+}
+
+export async function addFinancialLineItem(formData: FormData) {
+  const user = await requireUser();
+  const parentId = String(formData.get("parentId") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const target = numberFrom(formData, "target") ?? 0;
+  if (!parentId || !title || target < 0) return;
+
+  const parent = await db.query.goals.findFirst({
+    where: and(eq(goals.id, parentId), eq(goals.userId, user.id)),
+  });
+  if (!parent || parent.status === "archived") return;
+
+  await db.insert(goals).values({
+    id: crypto.randomUUID(),
+    userId: user.id,
+    type: "financial",
+    title,
+    periodStart: parent.periodStart,
+    periodEnd: parent.periodEnd,
+    targetValue: target,
+    status: "active",
+    parentGoalId: parent.id,
+    category: parent.category,
+    allocationPercent: null,
+    createdAt: new Date(),
+  });
+  refresh();
+}
+
+export async function updateGoalTarget(formData: FormData) {
+  const user = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const target = numberFrom(formData, "target");
+  if (!id || target === null || target < 0) return;
+  await db
+    .update(goals)
+    .set({ targetValue: target })
+    .where(and(eq(goals.id, id), eq(goals.userId, user.id)));
+  refresh();
+}
+
+async function cloneGoalTree(
+  sourceId: string,
+  userId: string,
+  newParentId: string | null,
+  period: { start: string; end: string },
+) {
+  const source = await db.query.goals.findFirst({
+    where: and(eq(goals.id, sourceId), eq(goals.userId, userId)),
+  });
+  if (!source) return;
+  const newId = crypto.randomUUID();
+  await db.insert(goals).values({
+    ...source,
+    id: newId,
+    parentGoalId: newParentId,
+    periodStart: period.start,
+    periodEnd: period.end,
+    status: "active",
+    createdAt: new Date(),
+  });
+  const children = await db.query.goals.findMany({
+    where: and(eq(goals.parentGoalId, source.id), eq(goals.userId, userId)),
+  });
+  for (const child of children) {
+    await cloneGoalTree(child.id, userId, newId, period);
+  }
 }
 
 export async function cloneFinancialToNextPeriod(formData: FormData) {
@@ -206,32 +313,8 @@ export async function cloneFinancialToNextPeriod(formData: FormData) {
     where: and(eq(goals.id, id), eq(goals.userId, user.id)),
   });
   if (!parent || parent.type !== "financial" || parent.parentGoalId) return;
-
   const next = nextMonthPeriod(parent.periodStart);
-  const children = await db.query.goals.findMany({
-    where: and(eq(goals.parentGoalId, parent.id), eq(goals.userId, user.id)),
-  });
-
-  const newId = crypto.randomUUID();
-  await db.insert(goals).values({
-    ...parent,
-    id: newId,
-    periodStart: next.start,
-    periodEnd: next.end,
-    status: "active",
-    createdAt: new Date(),
-  });
-  for (const child of children) {
-    await db.insert(goals).values({
-      ...child,
-      id: crypto.randomUUID(),
-      parentGoalId: newId,
-      periodStart: next.start,
-      periodEnd: next.end,
-      status: "active",
-      createdAt: new Date(),
-    });
-  }
+  await cloneGoalTree(parent.id, user.id, null, next);
   refresh();
 }
 

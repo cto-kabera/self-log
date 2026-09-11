@@ -23,6 +23,7 @@ export default async function GoalsPage() {
       <div className="mt-8">
         <GoalList
           goals={goals}
+          today={today}
           emptyTitle="No cadence goals yet"
           emptyBody="Add a daily, weekly, monthly, or quarterly target."
         />

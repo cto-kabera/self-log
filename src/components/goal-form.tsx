@@ -72,7 +72,7 @@ export function NewGoalForm({
           <input type="hidden" name="periodStartFallback" value={period.start} />
           <input type="hidden" name="periodEndFallback" value={period.end} />
           <div className="grid gap-2">
-            <Label htmlFor="period-start">Period start (YYYY-MM-DD)</Label>
+            <Label htmlFor="period-start">Cycle start (10th)</Label>
             <Input
               id="period-start"
               name="periodStart"
@@ -81,7 +81,7 @@ export function NewGoalForm({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="period-end">Period end (YYYY-MM-DD)</Label>
+            <Label htmlFor="period-end">Cycle end (9th)</Label>
             <Input
               id="period-end"
               name="periodEnd"

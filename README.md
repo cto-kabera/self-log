@@ -27,8 +27,8 @@ SQLite path defaults to `data/tracker.db`.
 ## What you can do now
 
 - Create cadence goals (daily / weekly / monthly / quarterly)
-- Create a financial goal for a period; set income and allocate bills, emergency fund, and saving as percentages of income
-- Log expenditure with a short comment for tracking
+- Create a financial plan on the 10th (cycle runs to the 9th): bills + emergency fund + investment = monthly target
+- Split bills (Rent, Food, Emergency) and saving (two pots); log spends on the days they happen, with comments
 - Planned vs actual roll up in the backend layer
 - Copy a financial plan to the next month
 - Carry daily goal titles into today

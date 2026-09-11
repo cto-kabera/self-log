@@ -51,6 +51,7 @@ export default async function HomePage() {
           <NewGoalForm today={today} defaultType="daily" />
           <GoalList
             goals={daily}
+            today={today}
             emptyTitle="No daily goals this period"
             emptyBody="Add a daily target, or carry yesterday’s titles into today."
           />
@@ -61,6 +62,7 @@ export default async function HomePage() {
             <GoalList
               goals={weekly}
               compact
+              today={today}
               emptyTitle="No weekly goals"
               emptyBody="Set a weekly target from the Goals page."
             />
@@ -78,6 +80,7 @@ export default async function HomePage() {
             <GoalList
               goals={monthly}
               compact
+              today={today}
               emptyTitle="No monthly or financial goals"
               emptyBody="Open Finance to create a period target with categories."
             />

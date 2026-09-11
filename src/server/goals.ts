@@ -35,6 +35,7 @@ function asEntry(row: typeof entries.$inferSelect): EntryRecord {
     plannedAmount: row.plannedAmount,
     actualAmount: row.actualAmount,
     comment: row.comment,
+    occurredOn: row.occurredOn,
     loggedAt: row.loggedAt,
   };
 }
@@ -80,7 +81,15 @@ export function presentGoal(
   const children = allGoals
     .filter((item) => item.parentGoalId === goal.id && item.status !== "archived")
     .map((child) => presentGoal(child, allGoals, allEntries, today));
-  const logs = allEntries.filter((entry) => entry.goalId === goal.id).slice(0, 5);
+  const logs = allEntries
+    .filter((entry) => entry.goalId === goal.id)
+    .sort((a, b) => {
+      const aDay = a.occurredOn ?? "";
+      const bDay = b.occurredOn ?? "";
+      if (aDay !== bDay) return bDay.localeCompare(aDay);
+      return b.loggedAt.getTime() - a.loggedAt.getTime();
+    })
+    .slice(0, 20);
 
   const isFinancialParent =
     goal.type === "financial" && !goal.parentGoalId && children.length > 0;
@@ -101,8 +110,9 @@ export function presentGoal(
     const budgetBase = incomePlanned > 0 ? incomePlanned : goal.targetValue;
     presentedChildren = children.map((child) => {
       if (child.category === "source") return child;
+      if (child.children.length > 0) return child;
       const allocated = allocatedFromIncome(budgetBase, child.allocationPercent);
-      if (allocated == null) return child;
+      if (allocated == null || !child.allocationPercent) return child;
       const remaining = Math.max(0, allocated - child.actual);
       const percent =
         allocated === 0 ? 0 : Math.min(100, Math.round((child.actual / allocated) * 100));

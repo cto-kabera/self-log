@@ -86,5 +86,6 @@ export const entries = sqliteTable("entries", {
   plannedAmount: real("planned_amount").notNull(),
   actualAmount: real("actual_amount").notNull(),
   comment: text("comment"),
+  occurredOn: text("occurred_on"),
   loggedAt: integer("logged_at", { mode: "timestamp" }).notNull(),
 });

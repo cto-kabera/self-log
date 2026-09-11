@@ -74,6 +74,27 @@ function lastDayOfMonth(year: number, monthIndex: number) {
   return formatLocalDate(new Date(year, monthIndex + 1, 0));
 }
 
+export const FINANCIAL_CYCLE_DAY = 10;
+
+export function financialCyclePeriod(today: string) {
+  const date = parseISODate(today);
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
+  if (day >= FINANCIAL_CYCLE_DAY) {
+    const start = formatLocalDate(new Date(year, month, FINANCIAL_CYCLE_DAY));
+    const end = formatLocalDate(new Date(year, month + 1, FINANCIAL_CYCLE_DAY - 1));
+    return { start, end };
+  }
+  const start = formatLocalDate(new Date(year, month - 1, FINANCIAL_CYCLE_DAY));
+  const end = formatLocalDate(new Date(year, month, FINANCIAL_CYCLE_DAY - 1));
+  return { start, end };
+}
+
+export function isFinancialPlanningDay(today: string) {
+  return parseISODate(today).getDate() === FINANCIAL_CYCLE_DAY;
+}
+
 export function periodForType(
   type: GoalType,
   today: string,
@@ -91,7 +112,10 @@ export function periodForType(
     const start = startOfWeek(today);
     return { start, end: addDays(start, 6) };
   }
-  if (type === "monthly" || type === "financial") {
+  if (type === "financial") {
+    return financialCyclePeriod(today);
+  }
+  if (type === "monthly") {
     const start = formatLocalDate(new Date(year, month, 1));
     return { start, end: lastDayOfMonth(year, month) };
   }
@@ -102,6 +126,16 @@ export function periodForType(
 }
 
 export function nextMonthPeriod(periodStart: string) {
+  const startDate = parseISODate(periodStart);
+  if (startDate.getDate() === FINANCIAL_CYCLE_DAY) {
+    const start = formatLocalDate(
+      new Date(startDate.getFullYear(), startDate.getMonth() + 1, FINANCIAL_CYCLE_DAY),
+    );
+    const end = formatLocalDate(
+      new Date(startDate.getFullYear(), startDate.getMonth() + 2, FINANCIAL_CYCLE_DAY - 1),
+    );
+    return { start, end };
+  }
   const date = parseISODate(periodStart);
   date.setDate(1);
   date.setMonth(date.getMonth() + 1);
@@ -147,6 +181,7 @@ export type EntryRecord = {
   plannedAmount: number;
   actualAmount: number;
   comment: string | null;
+  occurredOn: string | null;
   loggedAt: Date;
 };
 
@@ -182,7 +217,8 @@ export function plannedValue(
     (item) => item.parentGoalId === goal.id && item.status !== "archived",
   );
   if (children.length > 0) {
-    return children.reduce((sum, child) => sum + plannedValue(child, allGoals), 0);
+    const rolled = children.reduce((sum, child) => sum + plannedValue(child, allGoals), 0);
+    if (rolled > 0) return rolled;
   }
   return goal.targetValue;
 }
