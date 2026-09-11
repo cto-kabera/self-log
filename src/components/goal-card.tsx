@@ -6,6 +6,7 @@ import {
   saveFinancialBudget,
   updateGoalTarget,
 } from "@/actions/goals";
+import { BillsLedger } from "@/components/bills-ledger";
 import { Badge } from "@/components/ui/badge";
 import { FormSubmit } from "@/components/ui/button";
 import {
@@ -269,12 +270,12 @@ function CategorySection({
 }) {
   const isSpend = child.category !== "source";
   const isBills = child.category === "bills";
-  const canSplit = isBills || child.category === "investment_saving";
+  const canSplit = child.category === "investment_saving";
   const hasLines = child.children.length > 0;
-  const voteHeadTotal = child.voteHeadTotal ?? 0;
-  const monthTarget = child.planned;
-  const overTarget = child.actual > monthTarget && monthTarget > 0;
-  const remaining = Math.max(0, monthTarget - child.actual);
+
+  if (isBills) {
+    return <BillsLedger bills={child} today={today} />;
+  }
 
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
@@ -293,56 +294,6 @@ function CategorySection({
       </div>
       {compact ? null : (
         <div className="mt-3 grid gap-3">
-          {isBills ? (
-            <div className="grid gap-2 rounded-md border bg-card p-3">
-              <form
-                action={updateGoalTarget}
-                className="flex flex-col gap-2 sm:flex-row sm:items-end"
-              >
-                <input type="hidden" name="id" value={child.id} />
-                <div className="grid gap-1 sm:w-40">
-                  <Label htmlFor={`month-target-${child.id}`}>Month target</Label>
-                  <Input
-                    id={`month-target-${child.id}`}
-                    name="target"
-                    type="number"
-                    min={0}
-                    step="any"
-                    defaultValue={child.targetValue || monthTarget}
-                  />
-                </div>
-                <FormSubmit variant="outline" size="sm">
-                  Save target
-                </FormSubmit>
-              </form>
-              {monthTarget > 0 ? (
-                <>
-                  <Progress value={child.percent}>
-                    <ProgressLabel>
-                      Spent {formatAmount(child.actual)} of {formatAmount(monthTarget)}
-                    </ProgressLabel>
-                    <span className="ml-auto text-sm text-muted-foreground tabular-nums">
-                      {child.percent}%
-                    </span>
-                  </Progress>
-                  <p className="text-sm text-muted-foreground">
-                    {overTarget
-                      ? `${formatAmount(child.actual - monthTarget)} over the month target`
-                      : `${formatAmount(remaining)} left against the month target`}
-                    {voteHeadTotal > 0 &&
-                    Math.abs(voteHeadTotal - monthTarget) > 0.005
-                      ? ` · vote heads add up to ${formatAmount(voteHeadTotal)}`
-                      : ""}
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Set a month target, then log spend against each vote head to
-                  see how you are tracking.
-                </p>
-              )}
-            </div>
-          ) : null}
           {hasLines
             ? child.children.map((line) => (
                 <div key={line.id} className="rounded-md border bg-card p-3">
@@ -358,14 +309,11 @@ function CategorySection({
                   >
                     <input type="hidden" name="id" value={line.id} />
                     <div className="grid min-w-40 flex-1 gap-1">
-                      <Label htmlFor={`line-title-${line.id}`}>
-                        {isBills ? "Vote head" : "Line"}
-                      </Label>
+                      <Label htmlFor={`line-title-${line.id}`}>Line</Label>
                       <Input
                         id={`line-title-${line.id}`}
                         name="title"
                         defaultValue={line.title}
-                        required={isBills}
                       />
                     </div>
                     <div className="grid gap-1">
@@ -384,19 +332,11 @@ function CategorySection({
                       Save
                     </FormSubmit>
                   </form>
-                  {isBills && line.targetValue > 0 ? (
-                    <p className="mb-2 text-xs text-muted-foreground">
-                      {line.actual > line.targetValue
-                        ? `${formatAmount(line.actual - line.targetValue)} over this vote head`
-                        : `${formatAmount(Math.max(0, line.targetValue - line.actual))} left on this vote head`}
-                    </p>
-                  ) : null}
                   <LogForm
                     goalId={line.id}
                     today={today}
                     showComment={isSpend}
                     showDate={isSpend}
-                    spendOnly={isBills}
                     defaultLabel={line.title}
                     defaultPlanned={line.targetValue}
                   />
@@ -409,7 +349,6 @@ function CategorySection({
                   today={today}
                   showComment={isSpend}
                   showDate={isSpend}
-                  spendOnly={isBills}
                   defaultPlanned={isSpend ? child.planned : undefined}
                 />
               )}
@@ -420,16 +359,12 @@ function CategorySection({
             >
               <input type="hidden" name="parentId" value={child.id} />
               <div className="grid flex-1 gap-1">
-                <Label htmlFor={`new-line-${child.id}`}>
-                  {isBills ? "Vote head" : "Add line"}
-                </Label>
+                <Label htmlFor={`new-line-${child.id}`}>Add line</Label>
                 <Input
                   id={`new-line-${child.id}`}
                   name="title"
                   required
-                  placeholder={
-                    isBills ? "Rent, food, transport…" : "Another split…"
-                  }
+                  placeholder="Another split…"
                 />
               </div>
               <div className="grid gap-1 sm:w-28">

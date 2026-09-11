@@ -8,6 +8,7 @@ import { isISODate } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
 import {
   type Category,
+  DEFAULT_BILL_VOTE_HEADS,
   type GoalType,
   isGoalType,
   nextMonthPeriod,
@@ -120,25 +121,34 @@ export async function createGoal(formData: FormData) {
 
       const lineTitles =
         item.category === "bills"
-          ? ["Rent", "Food", "Emergency"]
+          ? DEFAULT_BILL_VOTE_HEADS.map((line) => ({
+              title: line.title,
+              amount: line.amount,
+            }))
           : item.category === "investment_saving"
-            ? ["Short-term", "Long-term"]
+            ? [
+                { title: "Short-term", amount: 0 },
+                { title: "Long-term", amount: 0 },
+              ]
             : [];
-      for (const lineTitle of lineTitles) {
+      for (const line of lineTitles) {
         await db.insert(goals).values({
           id: crypto.randomUUID(),
           userId: user.id,
           type: "financial",
-          title: lineTitle,
+          title: line.title,
           periodStart: period.start,
           periodEnd: period.end,
-          targetValue: 0,
+          targetValue: line.amount,
           status: "active",
           parentGoalId: categoryId,
           category: item.category,
           allocationPercent: null,
           createdAt: new Date(),
         });
+      }
+      if (item.category === "bills") {
+        await syncBillsCategoryTarget(user.id, categoryId);
       }
     }
   }
@@ -262,6 +272,7 @@ export async function addFinancialLineItem(formData: FormData) {
     allocationPercent: null,
     createdAt: new Date(),
   });
+  await syncBillsCategoryTarget(user.id, parent.id);
   refresh();
 }
 
@@ -278,7 +289,30 @@ export async function updateGoalTarget(formData: FormData) {
       ...(title ? { title } : {}),
     })
     .where(and(eq(goals.id, id), eq(goals.userId, user.id)));
+  const updated = await db.query.goals.findFirst({
+    where: and(eq(goals.id, id), eq(goals.userId, user.id)),
+  });
+  if (updated?.parentGoalId) {
+    await syncBillsCategoryTarget(user.id, updated.parentGoalId);
+  }
   refresh();
+}
+
+async function syncBillsCategoryTarget(userId: string, billsId: string) {
+  const bills = await db.query.goals.findFirst({
+    where: and(eq(goals.id, billsId), eq(goals.userId, userId)),
+  });
+  if (!bills || bills.category !== "bills") return;
+  const lines = await db.query.goals.findMany({
+    where: and(eq(goals.parentGoalId, bills.id), eq(goals.userId, userId)),
+  });
+  const sum = lines
+    .filter((line) => line.status !== "archived")
+    .reduce((total, line) => total + line.targetValue, 0);
+  await db
+    .update(goals)
+    .set({ targetValue: sum })
+    .where(and(eq(goals.id, bills.id), eq(goals.userId, userId)));
 }
 
 async function cloneGoalTree(

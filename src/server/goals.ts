@@ -9,6 +9,7 @@ import {
   type GoalRecord,
   type GoalStatus,
   plannedValue,
+  voteHeadSortIndex,
 } from "@/server/domain";
 
 function asGoal(row: typeof goals.$inferSelect): GoalRecord {
@@ -88,6 +89,10 @@ export function presentGoal(
   const children = allGoals
     .filter((item) => item.parentGoalId === goal.id && item.status !== "archived")
     .sort((a, b) => {
+      if (goal.category === "bills") {
+        const byVote = voteHeadSortIndex(a.title) - voteHeadSortIndex(b.title);
+        if (byVote !== 0) return byVote;
+      }
       const byCategory =
         (categoryOrder[a.category ?? ""] ?? 9) - (categoryOrder[b.category ?? ""] ?? 9);
       if (byCategory !== 0) return byCategory;
@@ -150,7 +155,7 @@ export function presentGoal(
 
   if (goal.category === "bills") {
     voteHeadTotal = children.reduce((sum, child) => sum + child.targetValue, 0);
-    planned = goal.targetValue > 0 ? goal.targetValue : voteHeadTotal || planned;
+    planned = voteHeadTotal > 0 ? voteHeadTotal : goal.targetValue || planned;
     targetForProgress = planned;
   }
 

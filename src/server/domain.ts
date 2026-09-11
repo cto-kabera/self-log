@@ -47,6 +47,17 @@ export function categoryLabel(category: Category) {
   }
 }
 
+export const DEFAULT_BILL_VOTE_HEADS = [
+  { title: "Rent", amount: 100_000 },
+  { title: "Food", amount: 35_000 },
+  { title: "Emergency", amount: 25_000 },
+] as const;
+
+export function voteHeadSortIndex(title: string) {
+  const index = DEFAULT_BILL_VOTE_HEADS.findIndex((item) => item.title === title);
+  return index === -1 ? DEFAULT_BILL_VOTE_HEADS.length : index;
+}
+
 export function typeLabel(type: GoalType) {
   switch (type) {
     case "daily":

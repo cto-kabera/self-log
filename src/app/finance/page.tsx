@@ -15,12 +15,12 @@ export default async function FinancePage() {
   );
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
       <h1 className="text-3xl font-semibold tracking-tight">Finance</h1>
       <p className="mt-2 text-muted-foreground">
-        Each cycle runs from the 10th to the 9th. Under <strong>Bills</strong>,
-        set the month target, then each vote head and its amount. Log spend as
-        it happens — it counts against both the vote head and the month target.
+        Each cycle runs from the 10th to the 9th. Bills is a table: target,
+        vote head, and spent. Add a spend when money goes out — the spent
+        column and the total add up so you can check them against the target.
       </p>
       <p className="mt-3 rounded-lg border bg-card px-3 py-2 text-sm">
         This cycle: {prettyDate(cycle.start)} – {prettyDate(cycle.end)}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { carryDailyGoals } from "@/actions/goals";
+import { BillsLedger } from "@/components/bills-ledger";
 import { GoalList } from "@/components/goal-card";
 import { NewGoalForm } from "@/components/goal-form";
 import { FormSubmit, buttonVariants } from "@/components/ui/button";
@@ -82,7 +83,8 @@ export default async function HomePage() {
             <div>
               <h2 className="text-lg font-medium">Bills this cycle</h2>
               <p className="text-sm text-muted-foreground">
-                Month target, then vote head and amount for each bill.
+                Target and vote head per bill. Log spend as it happens — totals
+                add up so you can check them against the target.
               </p>
             </div>
             <Link
@@ -92,12 +94,31 @@ export default async function HomePage() {
               Full finance plan
             </Link>
           </div>
-          <GoalList
-            goals={financial}
-            today={today}
-            emptyTitle="No financial plan this cycle"
-            emptyBody="Open Finance to set a bills month target and vote heads."
-          />
+          {financial.length === 0 ? (
+            <GoalList
+              goals={[]}
+              today={today}
+              emptyTitle="No financial plan this cycle"
+              emptyBody="Open Finance to set bill targets and vote heads."
+            />
+          ) : (
+            financial.map((plan) => {
+              const bills = plan.children.find(
+                (child) => child.category === "bills",
+              );
+              return bills ? (
+                <BillsLedger key={bills.id} bills={bills} today={today} />
+              ) : (
+                <GoalList
+                  key={plan.id}
+                  goals={[plan]}
+                  today={today}
+                  emptyTitle="No bills"
+                  emptyBody="This plan has no bills category yet."
+                />
+              );
+            })
+          )}
         </section>
         {quarterly.length > 0 ? (
           <section className="grid gap-4">
