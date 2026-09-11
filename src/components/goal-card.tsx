@@ -128,10 +128,14 @@ export function GoalCard({
                     {child.logs.length > 0 ? (
                       <ul className="grid gap-1 text-sm text-muted-foreground">
                         {child.logs.map((log) => (
-                          <li key={log.id}>
-                            {log.label}: planned {formatAmount(log.plannedAmount)},
-                            actual {formatAmount(log.actualAmount)}
-                            {log.comment ? ` — ${log.comment}` : ""}
+                          <li key={log.id} className="grid gap-0.5">
+                            <span>
+                              {log.label}: planned {formatAmount(log.plannedAmount)},
+                              actual {formatAmount(log.actualAmount)}
+                            </span>
+                            {log.comment ? (
+                              <span className="text-foreground">{log.comment}</span>
+                            ) : null}
                           </li>
                         ))}
                       </ul>
