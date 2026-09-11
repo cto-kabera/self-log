@@ -190,8 +190,8 @@ export async function archiveGoal(formData: FormData) {
 export async function saveFinancialBudget(formData: FormData) {
   const user = await requireUser();
   const parentId = String(formData.get("parentId") ?? "");
-  const income = numberFrom(formData, "income");
-  if (!parentId || income === null || income < 0) return;
+  const income = numberFrom(formData, "income") ?? 0;
+  if (!parentId || income < 0) return;
 
   const parent = await db.query.goals.findFirst({
     where: and(eq(goals.id, parentId), eq(goals.userId, user.id)),
