@@ -20,7 +20,7 @@ npm run db:push
 npm run dev
 ```
 
-Open [http://localhost:43123](http://localhost:43123).
+Open [http://localhost:43125](http://localhost:43125).
 
 SQLite path defaults to `data/tracker.db`.
 

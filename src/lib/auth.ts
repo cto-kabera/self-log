@@ -5,8 +5,8 @@ import { db } from "@/db";
 import * as schema from "@/db/schema";
 
 const trustedOrigins = [
-  "http://127.0.0.1:43123",
-  "http://localhost:43123",
+  "http://127.0.0.1:43125",
+  "http://localhost:43125",
   process.env.BETTER_AUTH_URL,
 ].filter((value): value is string => Boolean(value));
 
