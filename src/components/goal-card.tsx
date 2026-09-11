@@ -344,13 +344,38 @@ function CategorySection({
                 </div>
               ))
             : (
-                <LogForm
-                  goalId={child.id}
-                  today={today}
-                  showComment={isSpend}
-                  showDate={isSpend}
-                  defaultPlanned={isSpend ? child.planned : undefined}
-                />
+                <>
+                  {isSpend ? (
+                    <form
+                      action={updateGoalTarget}
+                      className="flex flex-col gap-2 sm:flex-row sm:items-end"
+                    >
+                      <input type="hidden" name="id" value={child.id} />
+                      <div className="grid gap-1 sm:w-28">
+                        <Label htmlFor={`planned-${child.id}`}>Planned</Label>
+                        <Input
+                          id={`planned-${child.id}`}
+                          name="target"
+                          type="number"
+                          min={0}
+                          step="any"
+                          defaultValue={child.targetValue || ""}
+                        />
+                      </div>
+                      <FormSubmit variant="outline" size="sm">
+                        Save planned
+                      </FormSubmit>
+                    </form>
+                  ) : null}
+                  <LogForm
+                    goalId={child.id}
+                    today={today}
+                    showComment={isSpend}
+                    showDate={isSpend}
+                    defaultPlanned={isSpend ? child.targetValue : undefined}
+                    hidePlanned={isSpend}
+                  />
+                </>
               )}
           {canSplit ? (
             <form
@@ -428,6 +453,7 @@ function LogForm({
   showComment = false,
   showDate = false,
   spendOnly = false,
+  hidePlanned = false,
   today,
 }: {
   goalId: string;
@@ -437,16 +463,17 @@ function LogForm({
   showComment?: boolean;
   showDate?: boolean;
   spendOnly?: boolean;
+  hidePlanned?: boolean;
   today?: string;
 }) {
   return (
     <form action={logEntry} noValidate className="grid gap-2">
       <input type="hidden" name="goalId" value={goalId} />
       {spendOnly ? (
-        <>
-          <input type="hidden" name="label" value={defaultLabel ?? "Spend"} />
-          <input type="hidden" name="planned" value={defaultPlanned ?? 0} />
-        </>
+        <input type="hidden" name="label" value={defaultLabel ?? "Spend"} />
+      ) : null}
+      {spendOnly || hidePlanned ? (
+        <input type="hidden" name="planned" value={defaultPlanned ?? 0} />
       ) : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         {showDate ? (
@@ -471,16 +498,18 @@ function LogForm({
                 defaultValue={defaultLabel}
               />
             </div>
-            <div className="grid gap-1 sm:w-28">
-              <Label htmlFor={`planned-${goalId}`}>Planned</Label>
-              <Input
-                id={`planned-${goalId}`}
-                name="planned"
-                type="number"
-                step="any"
-                defaultValue={defaultPlanned ?? 0}
-              />
-            </div>
+            {hidePlanned ? null : (
+              <div className="grid gap-1 sm:w-28">
+                <Label htmlFor={`planned-${goalId}`}>Planned</Label>
+                <Input
+                  id={`planned-${goalId}`}
+                  name="planned"
+                  type="number"
+                  step="any"
+                  defaultValue={defaultPlanned ?? ""}
+                />
+              </div>
+            )}
           </>
         )}
         <div className="grid gap-1 sm:w-28">

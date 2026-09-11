@@ -26,6 +26,12 @@ function numberFrom(formData: FormData, key: string) {
   return Number.isFinite(value) ? value : null;
 }
 
+function allocationPercentFrom(formData: FormData, key: string) {
+  const percent = numberFrom(formData, key);
+  if (percent == null || percent <= 0 || percent > 100) return null;
+  return percent;
+}
+
 function firstISODate(formData: FormData, ...keys: string[]) {
   for (const key of keys) {
     const value = String(formData.get(key) ?? "");
@@ -97,10 +103,12 @@ export async function createGoal(formData: FormData) {
       ];
     for (const item of defaults) {
       const percent =
-        item.category === "source" ? null : numberFrom(formData, item.percentKey);
+        item.category === "source"
+          ? null
+          : allocationPercentFrom(formData, item.percentKey);
       const fallbackAmount = numberFrom(formData, item.amountKey) ?? 0;
       const allocated =
-        item.category !== "source" && percent != null && percent > 0 && income > 0
+        item.category !== "source" && percent != null && income > 0
           ? Math.round(income * percent) / 100
           : fallbackAmount;
       const categoryId = crypto.randomUUID();
@@ -221,10 +229,12 @@ export async function saveFinancialBudget(formData: FormData) {
         .where(eq(goals.id, child.id));
       continue;
     }
-    const percent = numberFrom(formData, `pct_${child.category}`);
+    const percent = allocationPercentFrom(formData, `pct_${child.category}`);
     const amount = numberFrom(formData, `amt_${child.category}`);
     let allocated = child.targetValue;
-    if (percent != null && percent > 0) {
+    if (amount != null && amount > 0) {
+      allocated = amount;
+    } else if (percent != null && income > 0) {
       allocated = Math.round(income * percent) / 100;
     } else if (amount != null && amount >= 0) {
       allocated = amount;
@@ -233,7 +243,7 @@ export async function saveFinancialBudget(formData: FormData) {
     await db
       .update(goals)
       .set({
-        allocationPercent: percent != null && percent > 0 ? percent : child.allocationPercent,
+        allocationPercent: percent,
         targetValue: allocated,
       })
       .where(eq(goals.id, child.id));

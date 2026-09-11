@@ -196,11 +196,6 @@ export type EntryRecord = {
   loggedAt: Date;
 };
 
-export function allocatedFromIncome(income: number, percent: number | null) {
-  if (percent == null || percent < 0) return null;
-  return Math.round(income * percent) / 100;
-}
-
 export function actualValue(
   goal: GoalRecord,
   allGoals: GoalRecord[],

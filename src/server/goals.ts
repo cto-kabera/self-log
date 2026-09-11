@@ -3,7 +3,6 @@ import { db } from "@/db";
 import { entries, goals } from "@/db/schema";
 import {
   actualValue,
-  allocatedFromIncome,
   deriveStatus,
   type EntryRecord,
   type GoalRecord,
@@ -126,24 +125,7 @@ export function presentGoal(
     const spendKids = children.filter((child) => child.category !== "source");
     incomePlanned = incomeKids.reduce((sum, child) => sum + child.targetValue, 0);
     incomeActual = incomeKids.reduce((sum, child) => sum + child.actual, 0);
-    const budgetBase = incomePlanned > 0 ? incomePlanned : goal.targetValue;
-    presentedChildren = children.map((child) => {
-      if (child.category === "source") return child;
-      if (child.children.length > 0) return child;
-      const allocated = allocatedFromIncome(budgetBase, child.allocationPercent);
-      if (allocated == null || !child.allocationPercent) return child;
-      const remaining = Math.max(0, allocated - child.actual);
-      const percent =
-        allocated === 0 ? 0 : Math.min(100, Math.round((child.actual / allocated) * 100));
-      return {
-        ...child,
-        planned: allocated,
-        remaining,
-        percent,
-        variance: child.actual - allocated,
-      };
-    });
-    const presentedSpend = presentedChildren.filter((child) => child.category !== "source");
+    const presentedSpend = children.filter((child) => child.category !== "source");
     actual = spendKids.reduce((sum, child) => sum + child.actual, 0);
     planned = presentedSpend.reduce((sum, child) => sum + child.planned, 0);
     targetForProgress = planned > 0 ? planned : goal.targetValue;
