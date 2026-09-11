@@ -70,6 +70,7 @@ export type PresentedGoal = GoalRecord & {
   incomePlanned?: number;
   incomeActual?: number;
   allocationTotalPercent?: number;
+  voteHeadTotal?: number;
 };
 
 export function presentGoal(
@@ -100,6 +101,7 @@ export function presentGoal(
   let incomePlanned: number | undefined;
   let incomeActual: number | undefined;
   let allocationTotalPercent: number | undefined;
+  let voteHeadTotal: number | undefined;
   let targetForProgress = goal.targetValue;
 
   if (isFinancialParent) {
@@ -134,6 +136,12 @@ export function presentGoal(
     );
   }
 
+  if (goal.category === "bills") {
+    voteHeadTotal = children.reduce((sum, child) => sum + child.targetValue, 0);
+    planned = goal.targetValue > 0 ? goal.targetValue : voteHeadTotal || planned;
+    targetForProgress = planned;
+  }
+
   const status = deriveStatus({
     status: goal.status,
     periodEnd: goal.periodEnd,
@@ -160,6 +168,7 @@ export function presentGoal(
     incomePlanned,
     incomeActual,
     allocationTotalPercent,
+    voteHeadTotal,
   };
 }
 

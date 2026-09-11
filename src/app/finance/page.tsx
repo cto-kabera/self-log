@@ -18,10 +18,9 @@ export default async function FinancePage() {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       <h1 className="text-3xl font-semibold tracking-tight">Finance</h1>
       <p className="mt-2 text-muted-foreground">
-        Each cycle runs from the 10th to the 9th. On the 10th, set the monthly
-        target as bills + emergency fund + investment & saving (for example 160K
-        + 40K + 350K = 550K). Split bills into Rent, Food, and Emergency, and
-        split saving into two pots. Then log spends on the days they happen.
+        Each cycle runs from the 10th to the 9th. Set the plan target as bills +
+        emergency fund + investment & saving. Under bills, set a month target,
+        then track spend against it by vote head and amount.
       </p>
       <p className="mt-3 rounded-lg border bg-card px-3 py-2 text-sm">
         This cycle: {prettyDate(cycle.start)} – {prettyDate(cycle.end)}

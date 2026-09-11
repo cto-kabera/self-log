@@ -268,8 +268,13 @@ function CategorySection({
   today?: string;
 }) {
   const isSpend = child.category !== "source";
-  const canSplit = child.category === "bills" || child.category === "investment_saving";
+  const isBills = child.category === "bills";
+  const canSplit = isBills || child.category === "investment_saving";
   const hasLines = child.children.length > 0;
+  const voteHeadTotal = child.voteHeadTotal ?? 0;
+  const monthTarget = child.planned;
+  const overTarget = child.actual > monthTarget && monthTarget > 0;
+  const remaining = Math.max(0, monthTarget - child.actual);
 
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
@@ -288,6 +293,56 @@ function CategorySection({
       </div>
       {compact ? null : (
         <div className="mt-3 grid gap-3">
+          {isBills ? (
+            <div className="grid gap-2 rounded-md border bg-card p-3">
+              <form
+                action={updateGoalTarget}
+                className="flex flex-col gap-2 sm:flex-row sm:items-end"
+              >
+                <input type="hidden" name="id" value={child.id} />
+                <div className="grid gap-1 sm:w-40">
+                  <Label htmlFor={`month-target-${child.id}`}>Month target</Label>
+                  <Input
+                    id={`month-target-${child.id}`}
+                    name="target"
+                    type="number"
+                    min={0}
+                    step="any"
+                    defaultValue={child.targetValue || monthTarget}
+                  />
+                </div>
+                <FormSubmit variant="outline" size="sm">
+                  Save target
+                </FormSubmit>
+              </form>
+              {monthTarget > 0 ? (
+                <>
+                  <Progress value={child.percent}>
+                    <ProgressLabel>
+                      Spent {formatAmount(child.actual)} of {formatAmount(monthTarget)}
+                    </ProgressLabel>
+                    <span className="ml-auto text-sm text-muted-foreground tabular-nums">
+                      {child.percent}%
+                    </span>
+                  </Progress>
+                  <p className="text-sm text-muted-foreground">
+                    {overTarget
+                      ? `${formatAmount(child.actual - monthTarget)} over the month target`
+                      : `${formatAmount(remaining)} left against the month target`}
+                    {voteHeadTotal > 0 &&
+                    Math.abs(voteHeadTotal - monthTarget) > 0.005
+                      ? ` · vote heads add up to ${formatAmount(voteHeadTotal)}`
+                      : ""}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Set a month target, then log spend against each vote head to
+                  see how you are tracking.
+                </p>
+              )}
+            </div>
+          ) : null}
           {hasLines
             ? child.children.map((line) => (
                 <div key={line.id} className="rounded-md border bg-card p-3">
@@ -302,8 +357,19 @@ function CategorySection({
                     className="mb-3 flex flex-wrap items-end gap-2"
                   >
                     <input type="hidden" name="id" value={line.id} />
+                    <div className="grid min-w-40 flex-1 gap-1">
+                      <Label htmlFor={`line-title-${line.id}`}>
+                        {isBills ? "Vote head" : "Line"}
+                      </Label>
+                      <Input
+                        id={`line-title-${line.id}`}
+                        name="title"
+                        defaultValue={line.title}
+                        required={isBills}
+                      />
+                    </div>
                     <div className="grid gap-1">
-                      <Label htmlFor={`line-target-${line.id}`}>Target this cycle</Label>
+                      <Label htmlFor={`line-target-${line.id}`}>Amount</Label>
                       <Input
                         id={`line-target-${line.id}`}
                         name="target"
@@ -315,18 +381,26 @@ function CategorySection({
                       />
                     </div>
                     <FormSubmit variant="outline" size="sm">
-                      Save target
+                      Save
                     </FormSubmit>
                   </form>
+                  {isBills && line.targetValue > 0 ? (
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      {line.actual > line.targetValue
+                        ? `${formatAmount(line.actual - line.targetValue)} over this vote head`
+                        : `${formatAmount(Math.max(0, line.targetValue - line.actual))} left on this vote head`}
+                    </p>
+                  ) : null}
                   <LogForm
                     goalId={line.id}
                     today={today}
                     showComment={isSpend}
                     showDate={isSpend}
+                    spendOnly={isBills}
                     defaultLabel={line.title}
                     defaultPlanned={line.targetValue}
                   />
-                  <EntryList logs={line.logs} />
+                  <EntryList logs={line.logs} hideMatchingLabel={line.title} />
                 </div>
               ))
             : (
@@ -335,6 +409,7 @@ function CategorySection({
                   today={today}
                   showComment={isSpend}
                   showDate={isSpend}
+                  spendOnly={isBills}
                   defaultPlanned={isSpend ? child.planned : undefined}
                 />
               )}
@@ -345,18 +420,20 @@ function CategorySection({
             >
               <input type="hidden" name="parentId" value={child.id} />
               <div className="grid flex-1 gap-1">
-                <Label htmlFor={`new-line-${child.id}`}>Add line</Label>
+                <Label htmlFor={`new-line-${child.id}`}>
+                  {isBills ? "Vote head" : "Add line"}
+                </Label>
                 <Input
                   id={`new-line-${child.id}`}
                   name="title"
                   required
                   placeholder={
-                    child.category === "bills" ? "Transport, school…" : "Another split…"
+                    isBills ? "Rent, food, transport…" : "Another split…"
                   }
                 />
               </div>
               <div className="grid gap-1 sm:w-28">
-                <Label htmlFor={`new-line-target-${child.id}`}>Target</Label>
+                <Label htmlFor={`new-line-target-${child.id}`}>Amount</Label>
                 <Input
                   id={`new-line-target-${child.id}`}
                   name="target"
@@ -378,19 +455,32 @@ function CategorySection({
   );
 }
 
-function EntryList({ logs }: { logs: PresentedGoal["logs"] }) {
+function EntryList({
+  logs,
+  hideMatchingLabel,
+}: {
+  logs: PresentedGoal["logs"];
+  hideMatchingLabel?: string;
+}) {
   if (logs.length === 0) return null;
   return (
-    <ul className="grid gap-2 text-sm text-muted-foreground">
-      {logs.map((log) => (
-        <li key={log.id} className="grid gap-0.5">
-          <span>
-            {log.occurredOn ? `${log.occurredOn} · ` : ""}
-            {log.label}: {formatAmount(log.actualAmount)}
-          </span>
-          {log.comment ? <span className="text-foreground">{log.comment}</span> : null}
-        </li>
-      ))}
+    <ul className="mt-3 grid gap-2 text-sm text-muted-foreground">
+      {logs.map((log) => {
+        const showLabel =
+          log.label && log.label !== "Log" && log.label !== hideMatchingLabel;
+        return (
+          <li key={log.id} className="grid gap-0.5">
+            <span>
+              {log.occurredOn ? `${log.occurredOn} · ` : ""}
+              {showLabel ? `${log.label}: ` : ""}
+              {formatAmount(log.actualAmount)}
+            </span>
+            {log.comment ? (
+              <span className="text-foreground">{log.comment}</span>
+            ) : null}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -402,6 +492,7 @@ function LogForm({
   defaultPlanned,
   showComment = false,
   showDate = false,
+  spendOnly = false,
   today,
 }: {
   goalId: string;
@@ -410,11 +501,18 @@ function LogForm({
   defaultPlanned?: number;
   showComment?: boolean;
   showDate?: boolean;
+  spendOnly?: boolean;
   today?: string;
 }) {
   return (
     <form action={logEntry} noValidate className="grid gap-2">
       <input type="hidden" name="goalId" value={goalId} />
+      {spendOnly ? (
+        <>
+          <input type="hidden" name="label" value={defaultLabel ?? "Spend"} />
+          <input type="hidden" name="planned" value={defaultPlanned ?? 0} />
+        </>
+      ) : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         {showDate ? (
           <div className="grid gap-1 sm:w-36">
@@ -427,27 +525,33 @@ function LogForm({
             />
           </div>
         ) : null}
-        <div className="grid flex-1 gap-1">
-          <Label htmlFor={`label-${goalId}`}>Entry</Label>
-          <Input
-            id={`label-${goalId}`}
-            name="label"
-            placeholder="Rent, salary, groceries…"
-            defaultValue={defaultLabel}
-          />
-        </div>
+        {spendOnly ? null : (
+          <>
+            <div className="grid flex-1 gap-1">
+              <Label htmlFor={`label-${goalId}`}>Entry</Label>
+              <Input
+                id={`label-${goalId}`}
+                name="label"
+                placeholder="Rent, salary, groceries…"
+                defaultValue={defaultLabel}
+              />
+            </div>
+            <div className="grid gap-1 sm:w-28">
+              <Label htmlFor={`planned-${goalId}`}>Planned</Label>
+              <Input
+                id={`planned-${goalId}`}
+                name="planned"
+                type="number"
+                step="any"
+                defaultValue={defaultPlanned ?? 0}
+              />
+            </div>
+          </>
+        )}
         <div className="grid gap-1 sm:w-28">
-          <Label htmlFor={`planned-${goalId}`}>Planned</Label>
-          <Input
-            id={`planned-${goalId}`}
-            name="planned"
-            type="number"
-            step="any"
-            defaultValue={defaultPlanned ?? 0}
-          />
-        </div>
-        <div className="grid gap-1 sm:w-28">
-          <Label htmlFor={`actual-${goalId}`}>Actual</Label>
+          <Label htmlFor={`actual-${goalId}`}>
+            {spendOnly ? "Amount" : "Actual"}
+          </Label>
           <Input
             id={`actual-${goalId}`}
             name="actual"

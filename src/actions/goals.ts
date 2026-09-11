@@ -269,10 +269,14 @@ export async function updateGoalTarget(formData: FormData) {
   const user = await requireUser();
   const id = String(formData.get("id") ?? "");
   const target = numberFrom(formData, "target");
+  const title = String(formData.get("title") ?? "").trim();
   if (!id || target === null || target < 0) return;
   await db
     .update(goals)
-    .set({ targetValue: target })
+    .set({
+      targetValue: target,
+      ...(title ? { title } : {}),
+    })
     .where(and(eq(goals.id, id), eq(goals.userId, user.id)));
   refresh();
 }
