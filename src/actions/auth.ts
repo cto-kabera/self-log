@@ -1,16 +1,24 @@
 "use server";
 
-import { APIError } from "better-auth/api";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 
-export type AuthState = { error: string } | null;
+export type AuthState = { error: string } | { message: string } | null;
 
 function messageFrom(error: unknown) {
-  if (error instanceof APIError) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = String((error as { message: unknown }).message);
+    if (message) return message;
+  }
   if (error instanceof Error) return error.message;
   return "Something went wrong. Try again.";
+}
+
+function siteUrl() {
+  return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:43125").replace(
+    /\/$/,
+    "",
+  );
 }
 
 export async function signUpAction(
@@ -27,13 +35,18 @@ export async function signUpAction(
     return { error: "Use a password with at least 8 characters." };
   }
 
-  try {
-    await auth.api.signUpEmail({
-      body: { name, email, password },
-      headers: await headers(),
-    });
-  } catch (error) {
-    return { error: messageFrom(error) };
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { name },
+      emailRedirectTo: `${siteUrl()}/auth/callback`,
+    },
+  });
+  if (error) return { error: messageFrom(error) };
+  if (!data.session) {
+    return { message: "Check your email to confirm the account, then log in." };
   }
 
   redirect("/");
@@ -50,21 +63,15 @@ export async function signInAction(
     return { error: "Enter both email and password." };
   }
 
-  try {
-    await auth.api.signInEmail({
-      body: { email, password },
-      headers: await headers(),
-    });
-  } catch (error) {
-    return { error: messageFrom(error) };
-  }
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { error: messageFrom(error) };
 
   redirect("/");
 }
 
 export async function signOutAction() {
-  await auth.api.signOut({
-    headers: await headers(),
-  });
+  const supabase = await createClient();
+  await supabase.auth.signOut();
   redirect("/login");
 }

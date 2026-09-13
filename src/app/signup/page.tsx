@@ -19,8 +19,8 @@ export default async function SignupPage() {
         <CardHeader>
           <CardTitle>Create your account</CardTitle>
           <CardDescription>
-            Email and password. Google sign-in is documented for a later
-            Supabase project; it is not wired in this local preview.
+            Google or email and password. Confirmations follow your Supabase
+            Auth settings.
           </CardDescription>
         </CardHeader>
         <CardContent>

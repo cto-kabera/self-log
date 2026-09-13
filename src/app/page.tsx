@@ -167,7 +167,7 @@ function Landing() {
           Financial sub-goals for bills, emergency fund, saving, and income.
         </li>
         <li className="rounded-xl border bg-card p-4">
-          Email and password now. Google sign-in waits on a Supabase project.
+          Email/password and Google sign-in through a dedicated Supabase project.
         </li>
       </ul>
     </main>
