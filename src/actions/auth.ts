@@ -15,10 +15,11 @@ function messageFrom(error: unknown) {
 }
 
 function siteUrl() {
-  return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:43125").replace(
-    /\/$/,
-    "",
-  );
+  const value =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    process.env.RENDER_EXTERNAL_URL ??
+    "http://localhost:43125";
+  return value.replace(/\/$/, "");
 }
 
 export async function signUpAction(

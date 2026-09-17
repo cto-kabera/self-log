@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+.supabase-db-password
+.supabase-project.json
+.supabase-api-keys.json
 
 # local sqlite
 /data/*.db
@@ -41,6 +44,9 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# cursor
+.cursor/
 
 # typescript
 *.tsbuildinfo

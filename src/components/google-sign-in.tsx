@@ -5,23 +5,36 @@ import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-export function GoogleSignIn() {
+export function GoogleSignIn({
+  supabaseUrl,
+  supabaseKey,
+}: {
+  supabaseUrl: string;
+  supabaseKey: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function startGoogle() {
     setError(null);
     setPending(true);
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    if (!supabaseUrl) {
       setError("Add NEXT_PUBLIC_SUPABASE_URL to connect this app to Supabase.");
       setPending(false);
       return;
     }
-    const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const site = (process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin).replace(
+      /\/$/,
+      "",
+    );
+    const redirectTo = `${site}/auth/callback`;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo },
+      options: {
+        redirectTo,
+        queryParams: { prompt: "select_account" },
+      },
     });
     if (oauthError) {
       setError(oauthError.message);

@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getSession } from "@/lib/session";
-import { hasSupabaseConfig } from "@/lib/supabase/env";
+import { hasSupabaseConfig, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
 import { redirect } from "next/navigation";
 
 export default async function LoginPage({
@@ -18,6 +18,8 @@ export default async function LoginPage({
   const session = await getSession();
   if (session) redirect("/");
   const { error } = await searchParams;
+  const url = hasSupabaseConfig() ? supabaseUrl() : "";
+  const key = hasSupabaseConfig() ? supabasePublishableKey() : "";
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 items-center px-4 py-12">
@@ -41,7 +43,11 @@ export default async function LoginPage({
               try again.
             </p>
           ) : null}
-          <AuthForm mode="login" />
+          <AuthForm
+            mode="login"
+            supabaseUrl={url}
+            supabaseKey={key}
+          />
         </CardContent>
       </Card>
     </main>

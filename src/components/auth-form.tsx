@@ -8,7 +8,15 @@ import { FormSubmit } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export function AuthForm({
+  mode,
+  supabaseUrl,
+  supabaseKey,
+}: {
+  mode: "login" | "signup";
+  supabaseUrl: string;
+  supabaseKey: string;
+}) {
   const action = mode === "signup" ? signUpAction : signInAction;
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     action,
@@ -17,7 +25,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   return (
     <div className="grid gap-4">
-      <GoogleSignIn />
+      <GoogleSignIn supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} />
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span className="h-px flex-1 bg-border" />
         or email

@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getSession } from "@/lib/session";
+import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
 import { redirect } from "next/navigation";
 
 export default async function SignupPage() {
@@ -24,7 +25,11 @@ export default async function SignupPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AuthForm mode="signup" />
+          <AuthForm
+            mode="signup"
+            supabaseUrl={supabaseUrl()}
+            supabaseKey={supabasePublishableKey()}
+          />
         </CardContent>
       </Card>
     </main>
