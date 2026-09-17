@@ -8,6 +8,8 @@ import * as schema from "./schema";
 dns.setDefaultResultOrder("ipv4first");
 net.setDefaultAutoSelectFamily(false);
 
+const DIRECT_SUPABASE_DB = /^db\.([a-z0-9]+)\.supabase\.co$/i;
+
 function databaseUrl() {
   const value = process.env.DATABASE_URL;
   if (!value) {
@@ -48,45 +50,104 @@ function parseDatabaseUrl(raw: string) {
     throw new Error("DATABASE_URL is missing a hostname.");
   }
   const port = Number(portText || 5432);
-  const encoded = `${protocol}${encodeURIComponent(username)}:${encodeURIComponent(password)}@${hostPort}${pathAndQuery}`;
-  return { hostname, port, encoded };
+  return { protocol, username, password, hostname, port, pathAndQuery };
 }
 
-function connectIpv4Socket(hostname: string, port: number) {
+function encodeDatabaseUrl(parts: {
+  protocol: string;
+  username: string;
+  password: string;
+  hostname: string;
+  port: number;
+  pathAndQuery: string;
+}) {
+  return `${parts.protocol}${encodeURIComponent(parts.username)}:${encodeURIComponent(parts.password)}@${parts.hostname}:${parts.port}${parts.pathAndQuery}`;
+}
+
+/** Direct db.*.supabase.co is IPv6-only. Render needs the shared IPv4 pooler. */
+function forIpv4Network(parsed: ReturnType<typeof parseDatabaseUrl>) {
+  const match = parsed.hostname.match(DIRECT_SUPABASE_DB);
+  if (!match) {
+    return { ...parsed, lookupHosts: [parsed.hostname] };
+  }
+  const projectRef = match[1];
+  const region = process.env.SUPABASE_REGION || "eu-west-1";
+  const configured = process.env.SUPABASE_POOLER_HOST;
+  const lookupHosts = configured
+    ? [configured]
+    : [
+        `aws-0-${region}.pooler.supabase.com`,
+        `aws-1-${region}.pooler.supabase.com`,
+      ];
+  const username = parsed.username.includes(".")
+    ? parsed.username
+    : `${parsed.username}.${projectRef}`;
+  return {
+    ...parsed,
+    username,
+    hostname: lookupHosts[0],
+    port: parsed.port || 6543,
+    lookupHosts,
+  };
+}
+
+async function lookupIpv4(hostname: string) {
+  if (net.isIPv4(hostname)) {
+    return { hostname, address: hostname, family: 4 as const };
+  }
+  const { address, family } = await lookup(hostname, { family: 4 });
+  return { hostname, address, family };
+}
+
+function connectIpv4Socket(hosts: string[], port: number) {
   return new Promise<net.Socket>((resolve, reject) => {
     void (async () => {
-      try {
-        const { address, family } = net.isIPv4(hostname)
-          ? { address: hostname, family: 4 as const }
-          : await lookup(hostname, { family: 4 });
-        console.error("[db] ipv4 socket", { hostname, address, family, port });
-        const socket = net.connect({ host: address, port, family: 4 });
-        socket.once("connect", () => {
-          (socket as net.Socket & { host?: string }).host = hostname;
+      const errors: string[] = [];
+      for (const hostname of hosts) {
+        try {
+          const socket = await new Promise<net.Socket>((next, fail) => {
+            void (async () => {
+              try {
+                const { address, family } = await lookupIpv4(hostname);
+                console.error("[db] ipv4 socket", { hostname, address, family, port });
+                const sock = net.connect({ host: address, port, family: 4 });
+                sock.once("connect", () => {
+                  (sock as net.Socket & { host?: string }).host = hostname;
+                  next(sock);
+                });
+                sock.once("error", fail);
+              } catch (error) {
+                fail(error);
+              }
+            })();
+          });
           resolve(socket);
-        });
-        socket.once("error", reject);
-      } catch (error) {
-        console.error("[db] ipv4 lookup failed", {
-          hostname,
-          port,
-          err: error instanceof Error ? error.message : String(error),
-        });
-        reject(error);
+          return;
+        } catch (error) {
+          errors.push(
+            `${hostname}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
       }
+      console.error("[db] ipv4 lookup failed", { hosts, port, errors });
+      reject(new Error(errors.join("; ") || "IPv4 connect failed"));
     })();
   });
 }
 
 function createDb() {
-  const { hostname, port, encoded } = parseDatabaseUrl(databaseUrl());
-  console.error("[db] creating postgres client", { host: hostname, port });
-  const client = postgres(encoded, {
-    host: hostname,
-    port,
+  const connection = forIpv4Network(parseDatabaseUrl(databaseUrl()));
+  console.error("[db] creating postgres client", {
+    host: connection.hostname,
+    port: connection.port,
+    lookupHosts: connection.lookupHosts,
+  });
+  const client = postgres(encodeDatabaseUrl(connection), {
+    host: connection.hostname,
+    port: connection.port,
     prepare: false,
     ssl: "require",
-    socket: () => connectIpv4Socket(hostname, port),
+    socket: () => connectIpv4Socket(connection.lookupHosts, connection.port),
   } as Parameters<typeof postgres>[1]);
   return drizzle(client, { schema });
 }

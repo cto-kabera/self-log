@@ -20,5 +20,7 @@ services:
         sync: false
       - key: NODE_OPTIONS
         value: "--dns-result-order=ipv4first --no-network-family-autoselection"
+      - key: SUPABASE_REGION
+        value: eu-west-1
       - key: DATABASE_URL
         sync: false
