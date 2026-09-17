@@ -1,7 +1,9 @@
-import dns from "node:dns";
-import net from "node:net";
-
 export async function register() {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  const [{ default: dns }, { default: net }] = await Promise.all([
+    import("node:dns"),
+    import("node:net"),
+  ]);
   dns.setDefaultResultOrder("ipv4first");
   net.setDefaultAutoSelectFamily(false);
 }

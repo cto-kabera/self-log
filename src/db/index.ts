@@ -122,7 +122,7 @@ function createDb() {
     prepare: false,
     ssl: "require",
     socket: () => connectIpv4Socket(hostname, port),
-  });
+  } as Parameters<typeof postgres>[1]);
   return drizzle(client, { schema });
 }
 
