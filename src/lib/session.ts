@@ -19,83 +19,17 @@ function displayName(user: {
 }
 
 export async function getSession() {
-  if (!hasSupabaseConfig()) {
-    // #region agent log
-    fetch("http://127.0.0.1:7925/ingest/d17156d8-f8fd-4c26-b6f7-e30874c84942", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "77e8bf",
-      },
-      body: JSON.stringify({
-        sessionId: "77e8bf",
-        runId: "pre-fix",
-        hypothesisId: "C",
-        location: "session.ts:getSession",
-        message: "no supabase config",
-        data: {},
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    return null;
-  }
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.getUser();
-    // #region agent log
-    fetch("http://127.0.0.1:7925/ingest/d17156d8-f8fd-4c26-b6f7-e30874c84942", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "77e8bf",
-      },
-      body: JSON.stringify({
-        sessionId: "77e8bf",
-        runId: "pre-fix",
-        hypothesisId: "C",
-        location: "session.ts:getSession",
-        message: "getUser result",
-        data: {
-          hasUser: Boolean(data.user),
-          authError: error?.message ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    if (error || !data.user) return null;
-    return {
-      user: {
-        id: data.user.id,
-        email: data.user.email ?? "",
-        name: displayName(data.user),
-      },
-    };
-  } catch (err) {
-    // #region agent log
-    fetch("http://127.0.0.1:7925/ingest/d17156d8-f8fd-4c26-b6f7-e30874c84942", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "77e8bf",
-      },
-      body: JSON.stringify({
-        sessionId: "77e8bf",
-        runId: "pre-fix",
-        hypothesisId: "C",
-        location: "session.ts:getSession",
-        message: "getSession threw",
-        data: {
-          errName: err instanceof Error ? err.name : "unknown",
-          errMessage: err instanceof Error ? err.message : String(err),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    throw err;
-  }
+  if (!hasSupabaseConfig()) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) return null;
+  return {
+    user: {
+      id: data.user.id,
+      email: data.user.email ?? "",
+      name: displayName(data.user),
+    },
+  };
 }
 
 export async function requireUser() {
