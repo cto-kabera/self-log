@@ -15,7 +15,42 @@ export default async function HomePage() {
   if (!session) return <Landing />;
 
   const today = await getToday();
-  const all = await listTopLevelGoals(session.user.id, today);
+  let all;
+  try {
+    all = await listTopLevelGoals(session.user.id, today);
+  } catch (err) {
+    console.error("[home] listTopLevelGoals failed", err);
+    // #region agent log
+    fetch("http://127.0.0.1:7925/ingest/d17156d8-f8fd-4c26-b6f7-e30874c84942", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "77e8bf",
+      },
+      body: JSON.stringify({
+        sessionId: "77e8bf",
+        runId: "pre-fix",
+        hypothesisId: "A,B,D",
+        location: "page.tsx:HomePage",
+        message: "listTopLevelGoals threw",
+        data: {
+          errName: err instanceof Error ? err.name : "unknown",
+          errMessage: err instanceof Error ? err.message : String(err),
+          causeCode:
+            err instanceof Error &&
+            err.cause &&
+            typeof err.cause === "object" &&
+            "code" in err.cause
+              ? String((err.cause as { code?: unknown }).code)
+              : undefined,
+          signedIn: true,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    throw err;
+  }
   const current = all.filter((goal) =>
     overlapsToday(goal.periodStart, goal.periodEnd, today),
   );
