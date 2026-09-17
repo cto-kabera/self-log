@@ -6,4 +6,6 @@ export async function register() {
   ]);
   dns.setDefaultResultOrder("ipv4first");
   net.setDefaultAutoSelectFamily(false);
+  const { ensureDb } = await import("@/db");
+  await ensureDb();
 }

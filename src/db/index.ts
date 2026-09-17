@@ -1,6 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { lookup } from "node:dns/promises";
 import dns from "node:dns";
 import net from "node:net";
 import * as schema from "./schema";
@@ -73,11 +72,12 @@ function forIpv4Network(parsed: ReturnType<typeof parseDatabaseUrl>) {
   const projectRef = match[1];
   const region = process.env.SUPABASE_REGION || "eu-west-1";
   const configured = process.env.SUPABASE_POOLER_HOST;
+  // aws-0 accepted TCP but does not host this tenant.
   const lookupHosts = configured
     ? [configured]
     : [
-        `aws-0-${region}.pooler.supabase.com`,
         `aws-1-${region}.pooler.supabase.com`,
+        `aws-0-${region}.pooler.supabase.com`,
       ];
   const username = parsed.username.includes(".")
     ? parsed.username
@@ -91,79 +91,68 @@ function forIpv4Network(parsed: ReturnType<typeof parseDatabaseUrl>) {
   };
 }
 
-async function lookupIpv4(hostname: string) {
-  if (net.isIPv4(hostname)) {
-    return { hostname, address: hostname, family: 4 as const };
-  }
-  const { address, family } = await lookup(hostname, { family: 4 });
-  return { hostname, address, family };
-}
-
-function connectIpv4Socket(hosts: string[], port: number) {
-  return new Promise<net.Socket>((resolve, reject) => {
-    void (async () => {
-      const errors: string[] = [];
-      for (const hostname of hosts) {
-        try {
-          const socket = await new Promise<net.Socket>((next, fail) => {
-            void (async () => {
-              try {
-                const { address, family } = await lookupIpv4(hostname);
-                console.error("[db] ipv4 socket", { hostname, address, family, port });
-                const sock = net.connect({ host: address, port, family: 4 });
-                sock.once("connect", () => {
-                  (sock as net.Socket & { host?: string }).host = hostname;
-                  next(sock);
-                });
-                sock.once("error", fail);
-              } catch (error) {
-                fail(error);
-              }
-            })();
-          });
-          resolve(socket);
-          return;
-        } catch (error) {
-          errors.push(
-            `${hostname}: ${error instanceof Error ? error.message : String(error)}`,
-          );
-        }
-      }
-      console.error("[db] ipv4 lookup failed", { hosts, port, errors });
-      reject(new Error(errors.join("; ") || "IPv4 connect failed"));
-    })();
+function createClient(connection: ReturnType<typeof forIpv4Network>, hostname: string) {
+  return postgres(encodeDatabaseUrl({ ...connection, hostname }), {
+    host: hostname,
+    port: connection.port,
+    prepare: false,
+    ssl: "require",
+    connect_timeout: 15,
   });
 }
 
-function createDb() {
+function createDrizzle(hostname: string, connection: ReturnType<typeof forIpv4Network>) {
+  return drizzle(createClient(connection, hostname), { schema });
+}
+
+const globalForDb = globalThis as unknown as {
+  db?: ReturnType<typeof createDrizzle>;
+  dbProbe?: Promise<ReturnType<typeof createDrizzle>>;
+};
+
+async function openWorkingClient() {
   const connection = forIpv4Network(parseDatabaseUrl(databaseUrl()));
   console.error("[db] creating postgres client", {
     host: connection.hostname,
     port: connection.port,
     lookupHosts: connection.lookupHosts,
   });
-  const client = postgres(encodeDatabaseUrl(connection), {
-    host: connection.hostname,
-    port: connection.port,
-    prepare: false,
-    ssl: "require",
-    socket: () => connectIpv4Socket(connection.lookupHosts, connection.port),
-  } as Parameters<typeof postgres>[1]);
-  return drizzle(client, { schema });
+  let lastError: unknown;
+  for (const hostname of connection.lookupHosts) {
+    const client = createClient(connection, hostname);
+    try {
+      await client`select 1`;
+      console.error("[db] pooler ready", { hostname, port: connection.port });
+      return drizzle(client, { schema });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[db] pooler rejected", { hostname, message: message.slice(0, 240) });
+      await client.end({ timeout: 0 }).catch(() => {});
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Could not connect to the Supabase pooler.");
 }
 
-const globalForDb = globalThis as unknown as {
-  db?: ReturnType<typeof createDb>;
-};
+export async function ensureDb() {
+  if (globalForDb.db) return globalForDb.db;
+  globalForDb.dbProbe ??= openWorkingClient().then((db) => {
+    globalForDb.db = db;
+    return db;
+  });
+  return globalForDb.dbProbe;
+}
 
 function getDb() {
   if (!globalForDb.db) {
-    globalForDb.db = createDb();
+    throw new Error("Database is still connecting. Refresh in a moment.");
   }
   return globalForDb.db;
 }
 
-export const db = new Proxy({} as ReturnType<typeof createDb>, {
+export const db = new Proxy({} as ReturnType<typeof createDrizzle>, {
   get(_target, prop, _receiver) {
     const instance = getDb();
     const value = Reflect.get(instance, prop, instance);
